@@ -1,0 +1,4 @@
+authorized_keys_path: authorized_keys
+
+sftp_user: ftp
+sftp_chroot_dir: /home/"{{ sftp_user }}"

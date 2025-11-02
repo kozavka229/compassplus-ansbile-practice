@@ -1,0 +1,72 @@
+- name: template sshd_config
+  template:
+    src: sshd_config.j2
+    dest: /etc/ssh/sshd_config
+    owner: root
+    group: root
+    mode: "0644"
+    validate: /usr/sbin/sshd -t -f %s
+  notify: restart ssh
+
+- name: create ftp group
+  group:
+    name: "{{ sftp_user }}"
+    state: present
+
+- name: create chroot
+  file:
+    path: "{{ sftp_chroot_dir }}"
+    state: directory
+    owner: root
+    group: sftpg
+    mode: "0750"
+
+- name: create/update ftp user
+  user:
+    name: "{{ sftp_user }}"
+    create_home: false
+    group: "{{ sftp_user }}"
+    state: present
+
+- name: create .ssh dirs
+  file:
+    path: "/home/{{ item }}/.ssh"
+    state: directory
+    owner: "{{ item }}"
+    group: "{{ item }}"
+    mode: "0700"
+  loop: "{{ allow_users }}"
+
+- name: copy pubkey
+  copy:
+    src: "{{ authorized_keys_path }}"
+    dest: "/home/{{ item }}/.ssh/authorized_keys"
+    owner: "{{ item }}"
+    group: "{{ item }}"
+    mode: "0600"
+  loop: "{{ allow_users }}"
+
+- name: stat ssh moduli file
+  stat:
+    path: /etc/ssh/moduli
+  register: moduli_stat
+
+- name: filter moduli file
+  when: moduli_stat.stat.exists
+  script: setup_moduli.sh
+  changed_when: true
+  notify: restart ssh
+
+- name: install fail2ban
+  package:
+    name: fail2ban
+    state: present
+
+- name: copy jail.local cfg
+  copy:
+    src: jail.local
+    dest: /etc/fail2ban/jail.local
+    owner: root
+    group: root
+    mode: "0622"
+
