@@ -1,5 +1,7 @@
 ansible_connection: local
 
+authorized_keys_path: authorized_keys  
+
 allow_users: 
   - user
   - "{{ sftp_user }}" 
